@@ -1,0 +1,20 @@
+{
+  "files": {
+    "main.css": "/ethbux/static/css/main.e6c13ad2.css",
+    "main.js": "/ethbux/static/js/main.b890c2c2.js",
+    "static/js/453.602a1240.chunk.js": "/ethbux/static/js/453.602a1240.chunk.js",
+    "static/media/dialUp.mp3": "/ethbux/static/media/dialUp.2506704d530ec5461005.mp3",
+    "static/media/clouds.jpg": "/ethbux/static/media/clouds.f383d8178c3cf034a7b0.jpg",
+    "static/media/bsod.jpg": "/ethbux/static/media/bsod.2ef852c6e1dc97b566c1.jpg",
+    "static/media/ms_sans_serif.woff2": "/ethbux/static/media/ms_sans_serif.0348082abb503fb6a8c2.woff2",
+    "static/media/ms_sans_serif_bold.woff2": "/ethbux/static/media/ms_sans_serif_bold.7fcf57cc6e87ecddbf64.woff2",
+    "index.html": "/ethbux/index.html",
+    "main.e6c13ad2.css.map": "/ethbux/static/css/main.e6c13ad2.css.map",
+    "main.b890c2c2.js.map": "/ethbux/static/js/main.b890c2c2.js.map",
+    "453.602a1240.chunk.js.map": "/ethbux/static/js/453.602a1240.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.e6c13ad2.css",
+    "static/js/main.b890c2c2.js"
+  ]
+}
