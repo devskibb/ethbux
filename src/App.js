@@ -634,7 +634,7 @@ function App() {
                           True Supply: {Number(trueSupply).toLocaleString()} BUX
                         </p>
                         <p>
-                          Current APR: {Number(apr).toFixed(2)}%
+                          Current APR: {Number(apr).toFixed(6)}%
                           <Tooltip text="APR is calculated based on the fees collected in the last 24 hours, annualized. As more liquidity enters the protocol, more fees are captured from the pool, potentially increasing the APR. This creates a positive feedback loop where higher liquidity leads to higher returns." />
                         </p>
                         <Button 
@@ -664,19 +664,27 @@ function App() {
                       </div>
 
                       <div>
-                        <TextInput
-                          placeholder="BUX Amount"
-                          value={redeemAmount}
-                          onChange={e => setRedeemAmount(e.target.value)}
-                          style={{ width: '100%' }}
-                        />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                          <TextInput
+                            placeholder="BUX Amount"
+                            value={redeemAmount}
+                            onChange={e => setRedeemAmount(e.target.value)}
+                            style={{ width: '100%' }}
+                          />
+                          <Button 
+                            onClick={() => setRedeemAmount(buxBalance)}
+                            style={{ minWidth: 'auto', padding: '0 0.5rem' }}
+                          >
+                            Max
+                          </Button>
+                        </div>
                         <div style={{ display: 'flex', alignItems: 'center' }}>
                           <Button 
                             onClick={handleRedeem} 
                             disabled={isRedeemDisabled()}
                             style={{ marginTop: '0.5rem' }}
                           >
-                            Redeem Fees
+                            Redeem
                           </Button>
                           <Tooltip text="Redeem ETH by burning BUX. Receive the equivalent dollar value in ETH." />
                         </div>
@@ -697,18 +705,26 @@ function App() {
                       </StatusField>
 
                       <div style={{ marginBottom: '1rem' }}>
-                        <TextInput
-                          placeholder="BUX Amount"
-                          value={burnAmount}
-                          onChange={e => setBurnAmount(e.target.value)}
-                          style={{ width: '100%' }}
-                        />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                          <TextInput
+                            placeholder="BUX Amount"
+                            value={burnAmount}
+                            onChange={e => setBurnAmount(e.target.value)}
+                            style={{ width: '100%' }}
+                          />
+                          <Button 
+                            onClick={() => setBurnAmount(buxBalance)}
+                            style={{ minWidth: 'auto', padding: '0 0.5rem' }}
+                          >
+                            Max
+                          </Button>
+                        </div>
                         <div style={{ display: 'flex', alignItems: 'center', marginTop: '0.5rem' }}>
                           <Button 
                             onClick={handleBurn}
                             disabled={isBurnDisabled()}
                           >
-                            Burn BUX
+                            Redeem
                           </Button>
                           <Tooltip text="Burn your BUX tokens to receive the equivalent dollar value back in ETH. The exchange rate is determined by the current ETH/USD price." />
                         </div>
