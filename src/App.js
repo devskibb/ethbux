@@ -38,8 +38,8 @@ import { Pinball } from './components/Pinball';
 /* global BigInt */
 
 const ABI = [
-  "function mint() payable",
-  "function redeem(uint256 amount)",
+  "function mint(uint256 maxSlippage) payable",
+  "function redeem(uint256 amount, uint256 maxSlippage)",
   "function getTrueSupply() view returns (uint256)",
   "function aprData() view returns (uint256 feesPast24h, uint256 lastUpdateTime)",
   "function balanceOf(address) view returns (uint256)",
@@ -47,7 +47,7 @@ const ABI = [
   "function reflectFees()"
 ];
 
-const CONTRACT_ADDRESS = "0x910De3fF7e1733E3ED29c9b90B6e30b7593D8126";
+const CONTRACT_ADDRESS = "0xe0824281b2A843104dd63DC660c14668C283CDB2";
 const BASE_CHAIN_ID = "0x2105"; // Base mainnet
 
 const GlobalStyles = createGlobalStyle`
@@ -112,6 +112,30 @@ const CloseButton = styled(Button)`
   }
 `;
 
+const SlippageButton = styled(Button)`
+  margin: 0 4px;
+  min-width: 60px;
+`;
+
+const SlippageInput = styled(TextInput)`
+  width: 80px;
+  margin-right: 4px;
+`;
+
+const WarningText = styled.span`
+  color: #ff0000;
+  font-size: 12px;
+  margin-top: 4px;
+`;
+
+const CogIcon = styled.span`
+  cursor: pointer;
+  margin-left: 8px;
+  &:hover {
+    opacity: 0.8;
+  }
+`;
+
 function App() {
   const [provider, setProvider] = useState(null);
   const [contract, setContract] = useState(null);
@@ -139,6 +163,9 @@ function App() {
     y: window.innerHeight / 2 - 250
   });
   const [burnAmount, setBurnAmount] = useState('');
+  const [showSlippageModal, setShowSlippageModal] = useState(false);
+  const [slippage, setSlippage] = useState(50); // 0.5% default in basis points
+  const [customSlippage, setCustomSlippage] = useState('');
 
   const toggleWindow = (windowName) => {
     setOpenWindows(prev => ({
@@ -279,11 +306,15 @@ function App() {
       }
 
       console.log("Starting data update...");
-
+      
       // Get the raw data
       const supply = await contract.getTrueSupply();
-      console.log("Got supply:", supply.toString());
-
+      console.log("Raw supply:", supply.toString());
+      
+      // Format before setting state
+      const formattedSupply = formatEther(supply);
+      setTrueSupply(formattedSupply);
+      
       const aprData = await contract.aprData();
       console.log("Got APR data:", {
         feesPast24h: aprData[0].toString(),
@@ -294,7 +325,6 @@ function App() {
       console.log("Got balance:", buxBalance.toString());
 
       // Format the values
-      const formattedSupply = formatEther(supply);
       const formattedFees = formatEther(aprData[0]);
       const formattedBalance = formatEther(buxBalance);
 
@@ -305,7 +335,6 @@ function App() {
       });
 
       // Set the states
-      setTrueSupply(formattedSupply);
       setBuxBalance(formattedBalance);
       
       // Calculate APR
@@ -345,123 +374,48 @@ function App() {
     }
   }, [contract, walletAddress]);
 
+  const handleSlippageSelect = (bps) => {
+    setSlippage(bps);
+    setCustomSlippage('');
+  };
+
+  const handleCustomSlippageChange = (e) => {
+    const value = e.target.value;
+    if (value === '') {
+      setCustomSlippage('');
+      return;
+    }
+    
+    // Convert percentage to basis points
+    const bps = Math.floor(parseFloat(value) * 100);
+    setCustomSlippage(value);
+    
+    if (!isNaN(bps) && bps > 0 && bps <= 1000) {
+      setSlippage(bps);
+    }
+  };
+
   const handleMint = async () => {
     try {
-      const weiAmount = parseEther(mintAmount);
-      
-      console.log("Attempting to mint with:", {
-        value: weiAmount.toString(),
-        contract: contract.target
-      });
-      
-      // First estimate gas
-      console.log("Estimating gas...");
-      const gasEstimate = await contract.mint.estimateGas({
+      const weiAmount = parseEther(mintAmount.toString());
+      const tx = await contract.mint(slippage, {
         value: weiAmount
       });
-      console.log("Gas estimate:", gasEstimate.toString());
-      
-      // Add 20% buffer to gas estimate
-      const gasLimit = Math.floor(Number(gasEstimate) * 1.2);
-      console.log("Gas limit with buffer:", gasLimit);
-      
-      // Call mint with estimated gas
-      const tx = await contract.mint({
-        value: weiAmount,
-        gasLimit: gasLimit
-      });
-      
-      console.log("Transaction sent:", tx);
-      console.log("Waiting for confirmation...");
-      
-      const receipt = await tx.wait();
-      console.log("Transaction receipt:", receipt);
-
-      if (receipt.status === 0) {
-        throw new Error("Transaction failed");
-      }
-      
-      console.log("Transaction successful!");
-      updateData(contract);
+      await tx.wait();
       await updateBalances();
-      setMintAmount('');
     } catch (err) {
-      console.error("Minting error details:", {
-        error: err,
-        errorMessage: err.message,
-        errorReason: err.reason,
-        errorCode: err.code,
-        transaction: err.transaction,
-        data: err.data,
-        error_data: err.error?.data // Additional error data if available
-      });
-      
-      if (err.reason) {
-        alert(`Error: ${err.reason}`);
-      } else if (err.error?.data) {
-        alert(`Transaction failed: ${err.error.data}`);
-      } else {
-        alert('Error minting BUX. Check console for details.');
-      }
+      console.error("Mint error:", err);
     }
   };
 
   const handleRedeem = async () => {
     try {
-      // Convert BUX amount to wei (18 decimals)
-      const buxWeiAmount = parseEther(redeemAmount);
-      
-      console.log("Attempting to redeem:", {
-        amount: buxWeiAmount.toString(),
-        contract: contract.target
-      });
-      
-      // First estimate gas
-      console.log("Estimating gas...");
-      const gasEstimate = await contract.redeem.estimateGas(buxWeiAmount);
-      console.log("Gas estimate:", gasEstimate.toString());
-      
-      // Add 20% buffer to gas estimate
-      const gasLimit = Math.floor(Number(gasEstimate) * 1.2);
-      console.log("Gas limit with buffer:", gasLimit);
-      
-      // Call redeem with the BUX amount
-      const tx = await contract.redeem(buxWeiAmount, {
-        gasLimit: gasLimit
-      });
-      
-      console.log("Transaction sent:", tx);
-      console.log("Waiting for confirmation...");
-      
-      const receipt = await tx.wait();
-      console.log("Transaction receipt:", receipt);
-
-      if (receipt.status === 0) {
-        throw new Error("Transaction failed");
-      }
-      
-      console.log("Transaction successful!");
-      updateData(contract);
+      const weiAmount = parseEther(redeemAmount.toString());
+      const tx = await contract.redeem(weiAmount, slippage);
+      await tx.wait();
       await updateBalances();
-      setRedeemAmount('');
     } catch (err) {
-      console.error("Redeem error details:", {
-        error: err,
-        errorMessage: err.message,
-        errorReason: err.reason,
-        errorCode: err.code,
-        transaction: err.transaction,
-        data: err.data,
-        error_data: err.error?.data
-      });
-      
-      if (err.reason) {
-        alert(`Error: ${err.reason}`);
-      } else if (err.error?.data) {
-        alert(`Transaction failed: ${err.error.data}`);
-      } else {
-        alert('Error redeeming BUX. Check console for details.');
-      }
+      console.error("Redeem error:", err);
     }
   };
 
@@ -629,10 +583,11 @@ function App() {
                 <TabBody>
                   {activeTab === 0 ? (
                     <>
-                      <StatusField label="Market Info">
-                        <p>
-                          True Supply: {Number(trueSupply).toLocaleString()} BUX
-                        </p>
+                      <StatusField label="Market">
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span>True Supply: {typeof trueSupply === 'string' ? Number(trueSupply).toFixed(2) : '0'} BUX</span>
+                          <CogIcon onClick={() => setShowSlippageModal(true)}>⚙️</CogIcon>
+                        </div>
                         <p>
                           Current APR: {Number(apr).toFixed(6)}%
                           <Tooltip text="APR is calculated based on the fees collected in the last 24 hours, annualized. As more liquidity enters the protocol, more fees are captured from the pool, potentially increasing the APR. This creates a positive feedback loop where higher liquidity leads to higher returns." />
@@ -780,6 +735,60 @@ function App() {
           openWindows={openWindows}
           onWindowClick={toggleWindow}
         />
+
+        {/* Slippage Modal */}
+        {showSlippageModal && (
+          <Window
+            style={{
+              position: 'absolute',
+              left: '50%',
+              top: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: '300px',
+              zIndex: 999
+            }}
+          >
+            <WindowHeader>
+              <span>Slippage Settings</span>
+              <CloseButton onClick={() => setShowSlippageModal(false)}>
+                <span>×</span>
+              </CloseButton>
+            </WindowHeader>
+            <WindowContent>
+              <div style={{ marginBottom: '16px' }}>
+                <SlippageButton
+                  onClick={() => handleSlippageSelect(10)}
+                  active={slippage === 10 && !customSlippage}
+                >
+                  0.1%
+                </SlippageButton>
+                <SlippageButton
+                  onClick={() => handleSlippageSelect(50)}
+                  active={slippage === 50 && !customSlippage}
+                >
+                  0.5%
+                </SlippageButton>
+                <SlippageButton
+                  onClick={() => handleSlippageSelect(100)}
+                  active={slippage === 100 && !customSlippage}
+                >
+                  1.0%
+                </SlippageButton>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <SlippageInput
+                  value={customSlippage}
+                  onChange={handleCustomSlippageChange}
+                  placeholder="Custom"
+                />
+                <span>%</span>
+              </div>
+              {customSlippage && parseFloat(customSlippage) > 10 && (
+                <WarningText>Maximum slippage is 10%</WarningText>
+              )}
+            </WindowContent>
+          </Window>
+        )}
       </Wrapper>
     </ThemeProvider>
   );

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { Window, WindowHeader, WindowContent, Button } from 'react95';
 import Draggable from 'react-draggable';
@@ -25,16 +25,27 @@ const CloseButton = styled(Button)`
   }
 `;
 
-const DoomFrame = styled.iframe`
-  width: 100%;
-  height: 100%;
-  border: none;
-  margin: 0;
-  padding: 0;
-  display: block;
-`;
-
 export function Doom({ onClose }) {
+  const canvasRef = useRef(null);
+
+  useEffect(() => {
+    const iframe = document.createElement('iframe');
+    iframe.src = 'https://archive.org/embed/doom-play';
+    iframe.style.width = '100%';
+    iframe.style.height = '100%';
+    iframe.style.border = 'none';
+    
+    if (canvasRef.current) {
+      canvasRef.current.appendChild(iframe);
+    }
+
+    return () => {
+      if (canvasRef.current) {
+        canvasRef.current.innerHTML = '';
+      }
+    };
+  }, []);
+
   return (
     <Draggable bounds="parent" handle=".window-header">
       <DoomWindow>
@@ -45,13 +56,7 @@ export function Doom({ onClose }) {
           </CloseButton>
         </WindowHeader>
         <WindowContent style={{ padding: 0, height: 'calc(100% - 33px)', overflow: 'hidden' }}>
-          <DoomFrame 
-            src="https://archive.org/embed/doom-play"
-            title="DOOM"
-            allow="autoplay; fullscreen"
-            allowFullScreen
-            scrolling="no"
-          />
+          <div ref={canvasRef} style={{ width: '100%', height: '100%' }} />
         </WindowContent>
       </DoomWindow>
     </Draggable>
